@@ -102,7 +102,8 @@ def main(client: Client):
 
     add_aggregate_signatures_and_check(psbt, wallet_policy)
 
-    print("\nPsbt with the final signatures (if complete, `bitcoin-cli finalizepsbt` should be able to finalize it):\n", psbt.serialize())
+    print("\nPsbt with the final signatures (if complete, `bitcoin-cli finalizepsbt` should be able to finalize it):")
+    print(psbt.serialize())
 
     print("\n\n🐮 My job here is done. Good luck!")
 
