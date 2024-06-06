@@ -19,7 +19,7 @@ import utils.bip0327 as bip0327
 
 
 # TODO: move the wallet policy helpers out of the musig2 module
-from utils.musig2 import Musig2KeyPlaceholder, PlainKeyPlaceholder, TrDescriptorTemplate, aggregate_musig_pubkey, derive_plain_descriptor, tapleaf_hash
+from utils.musig2 import Musig2KeyPlaceholder, PlainKeyPlaceholder, TrDescriptorTemplate, aggregate_musig_pubkey, derive_plain_descriptor, deserialize_pubkeys, tapleaf_hash
 from utils.taproot import G, point_mul
 
 
@@ -184,9 +184,8 @@ def get_placeholder_root_key(placeholder: PlainKeyPlaceholder | Musig2KeyPlaceho
                 key_info[1:key_origin_end_pos])
         root_pubkey = ExtendedKey.deserialize(xpub)
     elif isinstance(placeholder, Musig2KeyPlaceholder):
-        agg_xpub_str, _ = aggregate_musig_pubkey(
+        root_pubkey, _ = aggregate_musig_pubkey(
             keys_info[i] for i in placeholder.key_indexes)
-        root_pubkey = ExtendedKey.deserialize(agg_xpub_str)
         root_key_origin = KeyOriginInfo(
             hash160(root_pubkey.pubkey)[:4],
             []
@@ -216,6 +215,14 @@ def fill_inout(desc_tmpl: TrDescriptorTemplate, wallet_policy: WalletPolicy, ino
     for placeholder, tapleaf_desc in desc_tmpl.placeholders():
         root_pubkey, root_pubkey_origin = get_placeholder_root_key(
             placeholder, wallet_policy.keys_info)
+
+        if isinstance(placeholder, Musig2KeyPlaceholder):
+            keys_info_in_musig = [wallet_policy.keys_info[i]
+                                  for i in placeholder.key_indexes]
+            root_pubkey, _ = aggregate_musig_pubkey(keys_info_in_musig)
+            pubkeys, _ = deserialize_pubkeys(keys_info_in_musig)
+            inout.musig2_participant_pubkeys[root_pubkey.pubkey] = list(
+                sorted(pubkeys))
 
         placeholder_der_subpath = [
             placeholder.num1 if not is_change else placeholder.num2,

@@ -105,7 +105,7 @@ def extract_placeholders(desc_tmpl: str) -> List[KeyPlaceholder]:
     return [parse_placeholder(match[0]) for match in sorted_matches]
 
 
-def unsorted_musig(pubkeys: Iterable[bytes], version_bytes: bytes) -> Tuple[str, bip0327.KeyAggContext]:
+def unsorted_musig(pubkeys: Iterable[bytes], version_bytes: bytes) -> Tuple[ExtendedKey, bip0327.KeyAggContext]:
     """
     Constructs the musig2 aggregated extended public key from an unsorted list of
     compressed public keys, and the version bytes.
@@ -114,22 +114,25 @@ def unsorted_musig(pubkeys: Iterable[bytes], version_bytes: bytes) -> Tuple[str,
     assert all(len(pk) == 33 for pk in pubkeys)
     assert len(version_bytes) == 4
 
-    depth = b'\x00'
-    fingerprint = b'\x00\x00\x00\x00'
-    child_number = b'\x00\x00\x00\x00'
-
     key_agg_ctx = bip0327.key_agg(pubkeys)
     Q = key_agg_ctx.Q
     compressed_pubkey = (
         b'\x02' if Q[1] % 2 == 0 else b'\x03') + bip0327.get_xonly_pk(key_agg_ctx)
-    chaincode = bytes.fromhex(
-        "868087ca02a6f974c4598924c36b57762d32cb45717167e300622c7167e38965")
-    ext_pubkey = version_bytes + depth + fingerprint + \
-        child_number + chaincode + compressed_pubkey
-    return base58.b58encode_check(ext_pubkey).decode(), key_agg_ctx
+
+    ext_pubkey = ExtendedKey(
+        version=version_bytes,
+        depth=0,
+        parent_fingerprint=b'\x00\x00\x00\x00',
+        child_num=0,
+        chaincode=bytes.fromhex(
+            "868087ca02a6f974c4598924c36b57762d32cb45717167e300622c7167e38965"),
+        privkey=None,
+        pubkey=compressed_pubkey
+    )
+    return ext_pubkey, key_agg_ctx
 
 
-def musig(pubkeys: Iterable[bytes], version_bytes: bytes) -> Tuple[str, bip0327.KeyAggContext]:
+def musig(pubkeys: Iterable[bytes], version_bytes: bytes) -> Tuple[ExtendedKey, bip0327.KeyAggContext]:
     """
     Constructs the musig2 aggregated extended public key from a list of compressed public keys,
     and the version bytes. The keys are sorted, as required by the `the musig()` key expression
@@ -138,13 +141,8 @@ def musig(pubkeys: Iterable[bytes], version_bytes: bytes) -> Tuple[str, bip0327.
     return unsorted_musig(sorted(pubkeys), version_bytes)
 
 
-def aggregate_musig_pubkey(keys_info: Iterable[str]) -> Tuple[str, bip0327.KeyAggContext]:
-    """
-    Constructs the musig2 aggregated extended public key from the list of keys info
-    of the participating keys.
-    """
-
-    pubkeys: list[bytes] = []
+def deserialize_pubkeys(keys_info: Iterable[str]) -> Tuple[List[bytes], bytes]:
+    pubkeys: List[bytes] = []
     versions: Set[str] = set()
     for ki in keys_info:
         start = ki.find(']')
@@ -157,7 +155,17 @@ def aggregate_musig_pubkey(keys_info: Iterable[str]) -> Tuple[str, bip0327.KeyAg
         raise ValueError(
             "All the extended public keys should be from the same network")
 
-    return musig(pubkeys, versions.pop())
+    return pubkeys, versions.pop()
+
+
+def aggregate_musig_pubkey(keys_info: Iterable[str]) -> Tuple[ExtendedKey, bip0327.KeyAggContext]:
+    """
+    Constructs the musig2 aggregated extended public key from the list of keys info
+    of the participating keys.
+    """
+
+    pubkeys, version = deserialize_pubkeys(keys_info)
+    return musig(pubkeys, version)
 
 
 def derive_from_key_info(key_info: str, steps: List[int]) -> str:
@@ -193,7 +201,8 @@ def derive_plain_descriptor(desc_tmpl: str, keys_info: List[str], is_change: boo
 
         key_indexes = [int(i.strip('@')) for i in musig_content.split(',')]
         key_infos = [keys_info[i] for i in key_indexes]
-        agg_xpub = aggregate_musig_pubkey(key_infos)[0]
+        agg_xpub = base58.b58encode_check(
+            aggregate_musig_pubkey(key_infos)[0].serialize()).decode()
 
         return derive_from_key_info(agg_xpub, steps)
 
@@ -550,8 +559,8 @@ def process_placeholder(
         tweaks.append(taproot.tagged_hash("TapTweak", t))
         is_xonly_tweak.append(True)
 
-    keyagg_ctx = aggregate_musig_pubkey(
-        wallet_policy.keys_info[i] for i in placeholder.key_indexes)[1]
+    _, keyagg_ctx = aggregate_musig_pubkey(
+        wallet_policy.keys_info[i] for i in placeholder.key_indexes)
 
     for tweak, is_xonly in zip(tweaks, is_xonly_tweak):
         keyagg_ctx = bip0327.apply_tweak(keyagg_ctx, tweak, is_xonly)
@@ -599,9 +608,8 @@ class HotMusig2Cosigner(PsbtMusig2Cosigner):
             if not isinstance(placeholder, Musig2KeyPlaceholder):
                 continue
 
-            agg_xpub_str, keyagg_ctx = aggregate_musig_pubkey(
+            agg_xpub, keyagg_ctx = aggregate_musig_pubkey(
                 self.wallet_policy.keys_info[i] for i in placeholder.key_indexes)
-            agg_xpub = ExtendedKey.deserialize(agg_xpub_str)
 
             for input_index, input in enumerate(psbt.inputs):
                 result = process_placeholder(
@@ -657,9 +665,8 @@ class HotMusig2Cosigner(PsbtMusig2Cosigner):
             if not isinstance(placeholder, Musig2KeyPlaceholder):
                 continue
 
-            agg_xpub_str, keyagg_ctx = aggregate_musig_pubkey(
+            agg_xpub, keyagg_ctx = aggregate_musig_pubkey(
                 self.wallet_policy.keys_info[i] for i in placeholder.key_indexes)
-            agg_xpub = ExtendedKey.deserialize(agg_xpub_str)
 
             for input_index, input in enumerate(psbt.inputs):
                 result = process_placeholder(
