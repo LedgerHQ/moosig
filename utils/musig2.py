@@ -835,3 +835,119 @@ class LedgerMusig2Cosigner(PsbtMusig2Cosigner):
                 psbt.inputs[input_index].musig2_partial_sigs[psbt_key] = yielded.partial_signature
             elif isinstance(yielded, MusigPubNonce):
                 raise ValueError("Expected partial signatures, got a pubnonce")
+
+
+def add_aggregate_signatures_and_check(psbt: PSBT, wallet_policy: WalletPolicy):
+    desc_tmpl = TrDescriptorTemplate.from_string(
+        wallet_policy.descriptor_template)
+
+    for placeholder, tapleaf_desc in desc_tmpl.placeholders():
+        if not isinstance(placeholder, Musig2KeyPlaceholder):
+            continue
+
+        agg_xpub, keyagg_ctx = aggregate_musig_pubkey(
+            wallet_policy.keys_info[i] for i in placeholder.key_indexes)
+
+        for input_index, input in enumerate(psbt.inputs):
+            result = process_placeholder(
+                wallet_policy, input, placeholder, keyagg_ctx, agg_xpub, tapleaf_desc, desc_tmpl)
+
+            if result is None:
+                raise RuntimeError(
+                    "Unexpected: processing the musig placeholder failed")
+
+            (tweaks, is_xonly_tweak, leaf_script, aggpk_tweaked) = result
+
+            assert len(aggpk_tweaked) == 33
+
+            pubkeys_in_musig: List[ExtendedKey] = []
+            for i in placeholder.key_indexes:
+                k_i = wallet_policy.keys_info[i]
+                xpub_i = k_i[k_i.find(']') + 1:]
+                pubkeys_in_musig.append(ExtendedKey.deserialize(xpub_i))
+
+            # sort the keys in ascending order
+            pubkeys_in_musig = list(
+                sorted(pubkeys_in_musig, key=lambda x: x.pubkey))
+
+            nonces: List[bytes] = []
+            for participant_key in pubkeys_in_musig:
+                pubnonce_identifier = (
+                    participant_key.pubkey,
+                    aggpk_tweaked,
+                    tapleaf_hash(leaf_script)
+                )
+
+                assert len(aggpk_tweaked) == 33
+
+                if pubnonce_identifier in input.musig2_pub_nonces:
+                    nonces.append(
+                        input.musig2_pub_nonces[pubnonce_identifier])
+                else:
+                    raise ValueError(
+                        f"Missing pubnonce for pubkey {participant_key.pubkey.hex()} in psbt")
+
+            # compute the sighash, so we can verify if the final signature is correct
+            if leaf_script is None:
+                sighash = TaprootSignatureHash(
+                    txTo=psbt.tx,
+                    spent_utxos=[
+                        psbt.inputs[i].witness_utxo for i in range(len(psbt.inputs))],
+                    hash_type=input.sighash or SIGHASH_DEFAULT,
+                    input_index=input_index,
+                )
+            else:
+                sighash = TaprootSignatureHash(
+                    txTo=psbt.tx,
+                    spent_utxos=[
+                        psbt.inputs[i].witness_utxo for i in range(len(psbt.inputs))],
+                    hash_type=input.sighash or SIGHASH_DEFAULT,
+                    input_index=input_index,
+                    scriptpath=True,
+                    script=leaf_script
+                )
+
+            aggnonce = bip0327.nonce_agg(nonces)
+
+            session_ctx = bip0327.SessionContext(
+                aggnonce=aggnonce,
+                pubkeys=[pk.pubkey for pk in pubkeys_in_musig],
+                tweaks=tweaks,
+                is_xonly=is_xonly_tweak,
+                msg=sighash)
+
+            # collect partial signatures
+            psigs: List[bytes] = []
+
+            for participant_key in pubkeys_in_musig:
+                pubnonce_identifier = (
+                    participant_key.pubkey,
+                    bytes(aggpk_tweaked),
+                    tapleaf_hash(leaf_script)
+                )
+
+                if pubnonce_identifier in input.musig2_partial_sigs:
+                    psigs.append(
+                        input.musig2_partial_sigs[pubnonce_identifier])
+                else:
+                    raise ValueError(
+                        f"Missing partial signature for pubkey {participant_key.pubkey.hex()} in psbt")
+
+            sig = bip0327.partial_sig_agg(psigs, session_ctx)
+
+            aggpk_tweaked_xonly = aggpk_tweaked[1:]
+            result = bip0340.schnorr_verify(sighash, aggpk_tweaked_xonly, sig)
+
+            if not result:
+                raise ValueError(
+                    f"Something went wrong: signature verification failed for input {input_index}")
+
+            sighash_type = input.sighash or SIGHASH_DEFAULT
+            sig_and_type = sig if sighash_type == SIGHASH_DEFAULT else sig + \
+                sighash_type.to_bytes(1, byteorder='little')
+
+            if leaf_script is None:
+                input.tap_key_sig = sig_and_type
+            else:
+                input.tap_script_sigs[aggpk_tweaked_xonly,
+                                      tapleaf_hash(leaf_script)] = sig_and_type

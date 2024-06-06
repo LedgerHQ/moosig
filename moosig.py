@@ -5,7 +5,7 @@ from ledger_bitcoin.key import ExtendedKey
 
 from utils import txmaker
 from utils.cow import print_cow
-from utils.musig2 import HotMusig2Cosigner, LedgerMusig2Cosigner, PsbtMusig2Cosigner
+from utils.musig2 import HotMusig2Cosigner, LedgerMusig2Cosigner, PsbtMusig2Cosigner, add_aggregate_signatures_and_check
 
 
 def main(client: Client):
@@ -99,6 +99,10 @@ def main(client: Client):
         signer.generate_partial_signatures(psbt)
 
     print("\nPsbt after partial signatures:", psbt.serialize())
+
+    add_aggregate_signatures_and_check(psbt, wallet_policy)
+
+    print("\nPsbt with the final signatures (if complete, `bitcoin-cli finalizepsbt` should be able to finalize it):\n", psbt.serialize())
 
     print("\n\n🐮 My job here is done. Good luck!")
 
