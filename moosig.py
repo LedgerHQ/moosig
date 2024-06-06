@@ -14,13 +14,7 @@ def main(client: Client):
 
     print(f"Device master fingerprint: {fpr}\n")
 
-    descriptor_template = "tr(@0/**,pk(musig(@1,@2)/**))"
-
-    print(f"Descriptor template: {descriptor_template}\n")
-
-    unspendable_xpub = "tpubD6NzVbkrYhZ4WLczPJWReQycCJdd6YVWXubbVUFnJ5KgU5MDQrD998ZJLSmaB7GVcCnJSDWprxmrGkJ6SvgQC6QAffVpqSvonXmeizXcrkN"
-
-    # We use a Ledger for the first key
+    # We use a Ledger for the first key in the musig
     cosigner_1_path = "m/48'/1'/0'/2'"
     cosigner_1_xpub = client.get_extended_pubkey(cosigner_1_path)
     cosigner_1_key_info = f"[{cosigner_1_path.replace('m', fpr)}]{cosigner_1_xpub}"
@@ -36,9 +30,20 @@ def main(client: Client):
 
     wallet_policy = WalletPolicy(
         name="Musig for my ears",
-        descriptor_template=descriptor_template,
-        keys_info=[unspendable_xpub, cosigner_1_key_info, cosigner_2_xpub]
+        descriptor_template="tr(musig(@0,@1)/**)",
+        keys_info=[cosigner_1_key_info, cosigner_2_xpub]
     )
+
+    # Here is a walletpolicy using the taproot script path, instead:
+
+    # unspendable_xpub = "tpubD6NzVbkrYhZ4WLczPJWReQycCJdd6YVWXubbVUFnJ5KgU5MDQrD998ZJLSmaB7GVcCnJSDWprxmrGkJ6SvgQC6QAffVpqSvonXmeizXcrkN"
+    # wallet_policy = WalletPolicy(
+    #     name="Musig for the #teamscript",
+    #     descriptor_template="tr(@0/**,pk(musig(@1,@2)/**))",
+    #     keys_info=[unspendable_xpub, cosigner_1_key_info, cosigner_2_xpub]
+    # )
+
+    print(f"Descriptor template: {wallet_policy.descriptor_template}\n")
 
     print(f"Internal descriptor: {wallet_policy.get_descriptor(False)}")
     print(f"  Change descriptor: {wallet_policy.get_descriptor(True)}\n")
@@ -47,7 +52,7 @@ def main(client: Client):
     # Register the wallet
     _, wallet_hmac = client.register_wallet(wallet_policy)
 
-    print(f"Wallet HMAC: {wallet_hmac.hex()}\n")
+    print(f"Wallet policy HMAC: {wallet_hmac.hex()}\n")
 
     # Create a plausible PSBT for this policy
     USE_FAKE_PSBT = True
