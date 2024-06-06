@@ -18,7 +18,7 @@ For the supported policies, the implementation should be complient with the spec
 
 ### Ledger Bitcoin Test app with MuSig2 support
 
-The alpha version of the MuSig2-enabled Ledger Bitcoin app can be installed from Ledger Live.
+The alpha version of the MuSig2-enabled Ledger Bitcoin app can be installed from Ledger Live if you have a Nano X, Nano S+ or Stax. Support on Nano S is not planned.
 
 Make sure that `My Ledger ==> Experimental Features ==> Developer Mode` setting is enabled.
 
