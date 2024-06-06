@@ -10,7 +10,7 @@ This repository contains a simple script to test the implementation of MuSig2 su
 
 In wallet policies, `musig(...)/**` or `musig(...)/<NUM;NUM>/*` key expressions are added in taproot script. Such wallet policies map to a subset of the [proposed descriptor extensions for MuSig2](https://github.com/bitcoin/bips/pull/1540).
 
-Note that expressions like `musig(@0/**,@1/**)` or `musig(@0/<0;1>/*,@1/<0;1>/*)`, despite the corresponding descriptors being allowed in the BIP drafts. Aggregate-then-derive pattern is significantly more efficient for MuSig2.
+Note that expressions like `musig(@0/**,@1/**)` or `musig(@0/<0;1>/*,@1/<0;1>/*)` are _not_ supported, despite the corresponding descriptors being allowed in the BIP drafts. Aggregate-then-derive pattern is significantly more efficient for MuSig2, especially in the context of signing devices.
 
 For the supported policies, the implementation should be complient with the spec in the proposed BIPs. However, it has not yet been cross-tested with bitcoin-core implementation, and testing in general is still quite minimal. Therefore, bugs are likely!
 
