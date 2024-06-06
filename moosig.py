@@ -48,7 +48,7 @@ def main(client: Client):
     print(f"Internal descriptor: {wallet_policy.get_descriptor(False)}")
     print(f"  Change descriptor: {wallet_policy.get_descriptor(True)}\n")
 
-    print(f"\nPlease inspect and register the wallet policy on your device...")
+    print(f"\n🐮 Please inspect and register the wallet policy on your device...")
     # Register the wallet
     _, wallet_hmac = client.register_wallet(wallet_policy)
 
@@ -84,17 +84,17 @@ def main(client: Client):
 
     cosigners: List[PsbtMusig2Cosigner] = [signer_1, signer_2]
 
-    print("Signing time!")
+    print("🐮 Signing time!")
 
     print("Initial psbt:", psbt.serialize())
-    print("\nPlease approve the transaction on your device")
+    print("\n🐮 Please approve the transaction on your device")
     for signer in cosigners:
         signer.generate_public_nonces(psbt)
 
     print("\nPsbt after pubnonces:", psbt.serialize())
     # In a future version, if round 2 is done immediately after, without closing the device,
     # the second pass will happen silently.
-    print("\nSorry, I'll need you to approve the transaction again for round 2")
+    print("\n🐮 Sorry, I'll need you to approve the transaction again for round 2")
     for signer in cosigners:
         signer.generate_partial_signatures(psbt)
 
