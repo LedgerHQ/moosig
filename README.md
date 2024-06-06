@@ -53,6 +53,8 @@ If all goes well, you will register a musig2 policy using the Ledger device for 
 
 At this time, the transaction needs to be approved twice (as each round of the MuSig2 protocol is an independent psbt signing request). A future release will avoid this problem by letting the second round proceed silently if the app is not closed, and no other requests to sign a psbt are sent to the app in between the two signature. This will allow a smooth user experience for those cases when the cosigners are online simultaneously.
 
+If all goes well, the final psbt produced by the script can be finalized by the `bitcoin-cli -regtest finalizepsbt` command (as long as the version of bitcoin-core you are using supports the descriptor you are using - but not the `musig()` key expressions).
+
 Feel free to play around with the code in [moosig.py](moosig.py) to experiment with different policies.
 
 [^1]: Unfortunately, you will have to provide your own testnet/regtest coins if you want to test with a real transaction!</footnote>
