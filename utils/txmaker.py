@@ -293,8 +293,6 @@ def createPsbtForFakeTransaction(wallet_policy: WalletPolicy, input_amounts: Lis
     tx.vout = vout
     tx.wit = CTxWitness()
 
-    # TODO: add participant pubkeys
-
     change_address_index = randint(0, 10_000)
     for i, output_amount in enumerate(output_amounts):
         tx.vout[i].nValue = output_amount
