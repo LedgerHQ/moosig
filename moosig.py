@@ -87,14 +87,14 @@ def main(client: Client):
     print("🐮 Signing time!")
 
     print("Initial psbt:", psbt.serialize())
-    print("\n🐮 Please approve the transaction on your device")
+
+    print("\n🐮 Requesting pubnonces (Round 1)")
     for signer in cosigners:
         signer.generate_public_nonces(psbt)
 
     print("\nPsbt after pubnonces:", psbt.serialize())
-    # In a future version, if round 2 is done immediately after, without closing the device,
-    # the second pass will happen silently.
-    print("\n🐮 Sorry, I'll need you to approve the transaction again for round 2")
+
+    print("\n🐮 Please approve the transaction on your device (Round 2)")
     for signer in cosigners:
         signer.generate_partial_signatures(psbt)
 
@@ -102,7 +102,7 @@ def main(client: Client):
 
     add_aggregate_signatures_and_check(psbt, wallet_policy)
 
-    print("\nPsbt with the final signatures (if complete, `bitcoin-cli finalizepsbt` should be able to finalize it):")
+    print("\nPsbt with the final signatures (if complete, `bitcoin-cli -regtest finalizepsbt` should be able to finalize it):")
     print(psbt.serialize())
 
     print("\n\n🐮 My job here is done. Good luck!")
