@@ -41,8 +41,6 @@ Install dependencies with:
 $ pip install -r requirements.txt
 ```
 
-Note that the script depends on a still unreleased version of the `ledger_bitcoin` package, directly installed from the [app-bitcoin-new](https://github.com/LedgerHQ/app-bitcoin-new/tree/musig) repository.
-
 ## Run
 
 Have a Ledger device unlocked on the `Bitcoin Test Musig` app, and run:
