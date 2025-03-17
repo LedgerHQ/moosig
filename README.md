@@ -4,7 +4,7 @@ Fun with MuSig2 and Ledger devices 🎵
 
 Do not use for real funds. Only for testing!
 
-This repository contains a simple script to test the implementation of MuSig2 support in the [BIP-388](https://github.com/bitcoin/bips/blob/master/bip-0388.mediawiki)-compliant wallet policies that are supported in the Ledger bitcoin app.
+This repository contains a simple script to test the implementation of MuSig2 support in the [BIP-388](https://github.com/bitcoin/bips/blob/master/bip-0388.mediawiki)-compliant wallet policies that are supported in the Ledger bitcoin app since version <tt>2.4.0</tt>.
 
 ## Implementation details
 
@@ -18,11 +18,9 @@ For the supported policies, the implementation should be compliant with the spec
 
 ### Ledger Bitcoin Test app with MuSig2 support
 
-The alpha version of the MuSig2-enabled Ledger Bitcoin app can be installed from Ledger Live if you have a Nano X, Nano S+ or Stax. Support on Nano S is not planned.
+You can install version 2.4.0 Ledger Live if you have a Nano X, Nano S+, Flex or Stax. If you don't find it, make sure that your firmware OS is updated to the latest version.
 
-Make sure that `My Ledger ==> Experimental Features ==> Developer Mode` setting is enabled.
-
-Search the app called `Bitcoin Test Musig`. Like the `Bitcoin Test` app, it is compatible with all the bitcoin test networks.
+Make sure that `My Ledger ==> Experimental Features ==> Developer Mode` setting is enabled. You should now be able to install the `Bitcoin Test` app.
 
 Remember to close Ledger Live before continuing, as it might interfere with other programs interacting with the device simultaneously.
 
@@ -43,7 +41,7 @@ $ pip install -r requirements.txt
 
 ## Run
 
-Have a Ledger device unlocked on the `Bitcoin Test Musig` app, and run:
+Have a Ledger device unlocked on the `Bitcoin Test` app, and run:
 
 ```bash
 $ python moosig.py
