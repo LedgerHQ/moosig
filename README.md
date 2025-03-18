@@ -18,7 +18,7 @@ For the supported policies, the implementation should be compliant with the spec
 
 ### Ledger Bitcoin Test app with MuSig2 support
 
-You can install version 2.4.0 Ledger Live if you have a Nano X, Nano S+, Flex or Stax. If you don't find it, make sure that your firmware OS is updated to the latest version.
+You can install version 2.4.0 of the `Bitcoin Test` app from Ledger Live if you have a Nano X, Nano S+, Flex or Stax. If you can't find it, make sure that your firmware OS is updated to the latest version.
 
 Make sure that `My Ledger ==> Experimental Features ==> Developer Mode` setting is enabled. You should now be able to install the `Bitcoin Test` app.
 
