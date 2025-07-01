@@ -29,7 +29,7 @@ def main(client: Client):
     print(f"Hot cosigner xpub: {cosigner_2_xpub}\n")
 
     wallet_policy = WalletPolicy(
-        name="Musig for my ears",
+        name="Musig to my ears",
         descriptor_template="tr(musig(@0,@1)/**)",
         keys_info=[cosigner_1_key_info, cosigner_2_xpub]
     )
@@ -53,6 +53,10 @@ def main(client: Client):
     _, wallet_hmac = client.register_wallet(wallet_policy)
 
     print(f"Wallet policy HMAC: {wallet_hmac.hex()}\n")
+
+    # Show on the shell the first receive address of the account we just registered
+    first_addr = client.get_wallet_address(wallet_policy, wallet_hmac, change=0, address_index=0, display=False)
+    print(f"First receive address: {first_addr}\n")
 
     # Create a plausible PSBT for this policy
     USE_FAKE_PSBT = True
